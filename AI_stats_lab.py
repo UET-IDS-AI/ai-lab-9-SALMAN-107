@@ -54,7 +54,11 @@ def confusion_matrix_counts(y_true, y_pred):
         - Return the values in this exact order:
               (TP, FP, FN, TN)
     """
-    pass
+    TP = np.sum((y_true == 1) & (y_pred == 1))
+    FP = np.sum((y_true == 0) & (y_pred == 1))
+    FN = np.sum((y_true == 1) & (y_pred == 0))
+    TN = np.sum((y_true == 0) & (y_pred == 0))
+    return int(TP), int(FP), int(FN), int(TN)
 
 
 def classification_metrics(y_true, y_pred):
@@ -81,7 +85,17 @@ def classification_metrics(y_true, y_pred):
         - Then compute each metric from TP, FP, FN, and TN.
         - Return a dictionary, not a tuple or list.
     """
-    pass
+    TP, FP, FN, TN = confusion_matrix_counts(y_true, y_pred)
+    recall = TP / (TP + FN) if (TP + FN) > 0 else 0.0
+    fallout = FP / (FP + TN) if (FP + TN) > 0 else 0.0
+    precision = TP / (TP + FP) if (TP + FP) > 0 else 0.0
+    accuracy = (TP + TN) / (TP + FP + FN + TN) if (TP + FP + FN + TN) > 0 else 0.0
+    return {
+        "recall": float(recall),
+        "fallout": float(fallout),
+        "precision": float(precision),
+        "accuracy": float(accuracy)
+    }
 
 
 def apply_threshold(scores, threshold):
@@ -103,7 +117,8 @@ def apply_threshold(scores, threshold):
               score >= threshold  -> 1
               score < threshold   -> 0
     """
-    pass
+    scores = np.array(scores)
+    return (scores >= threshold).astype(int)
 
 
 def threshold_metrics_analysis(y_true, scores, thresholds):
@@ -142,7 +157,13 @@ def threshold_metrics_analysis(y_true, scores, thresholds):
         Higher threshold usually predicts fewer positives.
         This usually decreases fallout but may also decrease recall.
     """
-    pass
+    results = []
+    for threshold in thresholds:
+        y_pred = apply_threshold(scores, threshold)
+        metrics = classification_metrics(y_true, y_pred)
+        metrics["threshold"] = float(threshold)
+        results.append(metrics)
+    return results
 
 
 # ============================================================
@@ -179,7 +200,14 @@ def train_two_classifiers(X_train, y_train):
         - Fit both models using model.fit(X_train, y_train).
         - Return the trained models in a dictionary.
     """
-    pass
+    lr = LogisticRegression(max_iter=1000)
+    lr.fit(X_train, y_train)
+    dt = DecisionTreeClassifier(random_state=0)
+    dt.fit(X_train, y_train)
+    return {
+        "logistic_regression": lr,
+        "decision_tree": dt
+    }
 
 
 def evaluate_classifier(model, X_test, y_test, threshold=0.5):
@@ -215,7 +243,18 @@ def evaluate_classifier(model, X_test, y_test, threshold=0.5):
         - Then call classification_metrics.
         - Combine the counts and metrics into one dictionary.
     """
-    pass
+    scores = model.predict_proba(X_test)[:, 1]
+    y_pred = apply_threshold(scores, threshold)
+    TP, FP, FN, TN = confusion_matrix_counts(y_test, y_pred)
+    metrics = classification_metrics(y_test, y_pred)
+    result = {
+        "TP": TP,
+        "FP": FP,
+        "FN": FN,
+        "TN": TN
+    }
+    result.update(metrics)
+    return result
 
 
 def compare_classifiers(X_train, y_train, X_test, y_test, threshold=0.5):
@@ -238,7 +277,11 @@ def compare_classifiers(X_train, y_train, X_test, y_test, threshold=0.5):
         - Then evaluate both classifiers using evaluate_classifier.
         - Return a dictionary with results for both models.
     """
-    pass
+    models = train_two_classifiers(X_train, y_train)
+    return {
+        "logistic_regression": evaluate_classifier(models["logistic_regression"], X_test, y_test, threshold),
+        "decision_tree": evaluate_classifier(models["decision_tree"], X_test, y_test, threshold)
+    }
 
 
 if __name__ == "__main__":
